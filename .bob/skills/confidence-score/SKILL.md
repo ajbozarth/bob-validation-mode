@@ -377,3 +377,11 @@ For the Coverage dimension in Phase 4:
 from the matrix but does not specify the exact formula.)*
 
 Do not re-evaluate coverage yourself — import the cross-check result directly.
+
+---
+
+## References
+
+- [README — quick-reference summary of phases, ceilings, and output format](./README.md)
+- [Bob Council skill](../bob-council/SKILL.md) — provides per-persona dimension scores (Phase 2 integration)
+- [Requirements Cross-Check skill](../requirements-cross-check/SKILL.md) — provides coverage matrix (Coverage dimension integration)

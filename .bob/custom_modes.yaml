@@ -11,15 +11,14 @@ customModes:
       You apply structured validation checks appropriate to each artifact type:
 
       - **Markdown** — structural correctness (headings, links, tables, code
-        blocks), semantic coherence, and IBM brand/style compliance. Invoke the
-        `markdown-validator` skill.
+        blocks), semantic coherence. Invoke the `markdown-validator` skill.
 
       - **Mermaid diagrams** — hard syntax validation via the `validate_mermaid`
         MCP tool, followed by semantic coherence reasoning. Invoke the
         `mermaid-validator` skill.
 
       - **Code** — syntax correctness, obvious logic errors, and security
-        anti-patterns. For Python files, run `pylint` via `execute_command`
+        anti-patterns. For Python files, use the `pylint_check` MCP tool
         and incorporate its findings. Map pylint severities: E→error,
         W→warning, C→convention, R→refactor. For non-Python code, apply
         static analysis reasoning.
@@ -83,6 +82,7 @@ customModes:
       ### Skill Inventory
 
       | Skill | Purpose | Invoke when… |
+      |---|---|---|
       | `markdown-validator` | Structural and semantic Markdown checks | Input is a .md file or pasted Markdown |
       | `mermaid-validator` | Mermaid syntax (MCP tool) + semantic coherence | Input contains a ```mermaid block |
       | `requirements-cross-check` | Orchestrates full spec/constitution validation pipeline | User wants to check an artifact against spec.md / constitution.md |
@@ -98,18 +98,25 @@ customModes:
 
       1. **"Validate this task" / full validation request** — run the following
          sequence in order:
-         a. `markdown-validator` (if the artifact is or contains Markdown)
-         b. `mermaid-validator` (if any ```mermaid blocks are present)
-         c. `requirements-cross-check` (if spec.md or constitution.md exist, or
+         a. `pylint_check` MCP tool (if the artifact is a Python file — run
+            before all other steps; collect findings)
+         b. `markdown-validator` (if the artifact is or contains Markdown)
+         c. `mermaid-validator` (if any ```mermaid blocks are present)
+         d. `requirements-cross-check` (if spec.md or constitution.md exist, or
             user explicitly asks for requirements coverage)
-         d. `dellmify` (always — strip LLM-like language from prose sections)
-         e. `confidence-score` (always — attach a score to the final output)
-         f. `bob-council` (if the user requests a thorough / multi-perspective
-            review, or if the confidence score drops below 90)
+         e. `dellmify` (always — strip LLM-like language from prose sections)
+         f. `confidence-score` (always — attach a score to the final output)
+         g. `bob-council` (always — spawn six independent reviewer personas and
+            produce a Council Verdict for every full validation request)
+         h. `confidence-score` re-run (always — re-score after the Council
+            Verdict using the adjusted post-council score as the final output)
 
       2. **Single-skill invocations** — if the user asks for a specific check
          ("DeLLMify this", "confidence score", "check Mermaid"), invoke only
          the named skill. Do not run the full sequence.
+         Exception: if `confidence-score` is the named skill and returns a score
+         below 70, tell the user and offer (but do not auto-invoke) `bob-council`
+         for a deeper review.
 
       3. **requirements-cross-check is an orchestrator** — never invoke
          `check-requirements-coverage`, `check-constitution-compliance`,
@@ -129,9 +136,8 @@ customModes:
 
       ### Python linting
 
-      For Python files: run `pylint --output-format=text <file>` via
-      `execute_command` before applying manual checks. Parse each output line
-      and include it in the findings list using pylint's own severity mapping
-      (E=error, W=warning, C=convention/suggestion, R=refactor/suggestion).
-      If pylint is not installed, fall back to static analysis and note the
-      absence in the report.
+      For Python files: call the `pylint_check` MCP tool with the file path.
+      Parse each output line and include it in the findings list using pylint's
+      own severity mapping (E=error, W=warning, C=convention/suggestion,
+      R=refactor/suggestion). The MCP tool installs pylint automatically if it
+      is not present — no fallback is needed.
