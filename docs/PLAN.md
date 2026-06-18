@@ -96,7 +96,7 @@ Many AI-generated outputs contain hedging phrases, filler words, and overly defe
 
 ### Task 3 — Confidence Score
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent:**
 Attach a structured confidence rating to any generated output before the user acts on it. The score surfaces uncertainty — whether due to ambiguous input, limited grounding, speculative reasoning, or conflicting sources — so users know how much to trust the output.
