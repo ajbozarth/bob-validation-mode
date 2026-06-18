@@ -102,11 +102,11 @@ Then restart Bob (start a new session). The mode, skills, and MCP server are liv
 | Step | Action |
 |---|---|
 | 1 | Builds the MCP server (`npm ci && npm run build` inside `mcp-server/`) |
-| 2 | Symlinks each skill directory into `~/.bob/skills/` |
+| 2 | Copies each skill directory into `~/.bob/skills/` |
 | 3 | Appends the mode entry to `~/.bob/settings/custom_modes.yaml` |
 | 4 | Adds the MCP server entry to `~/.bob/settings/mcp.json` |
 
-Skills are symlinked, not copied — a `git pull` is all that's needed to pick up updates. Re-running `./scripts/install.sh` after a pull rebuilds the MCP server and updates any symlinks.
+Re-running `./scripts/install.sh` after a `git pull` rebuilds the MCP server and re-copies the skills.
 
 ### Uninstall
 
@@ -114,7 +114,7 @@ Skills are symlinked, not copied — a `git pull` is all that's needed to pick u
 ./scripts/uninstall.sh
 ```
 
-Removes skill symlinks, the mode entry, and the MCP registration. The cloned repo is left in place.
+Removes copied skills, the mode entry, and the MCP registration. The cloned repo is left in place.
 
 ## Mode
 
@@ -143,6 +143,14 @@ The bob-council pipeline produces:
 - A final score and recommendation: `SHIP` / `REVIEW` / `REWORK` / `DISCARD`
 
 The requirements pipeline produces `validation-report.md` with per-requirement coverage verdicts and per-guardrail compliance findings.
+
+## Prompt Documentation
+
+Real Bob chat transcripts showing the prompts used and outputs produced during development are in [`bob-chat-history/`](bob-chat-history/), organised by team member.
+
+## Planning Docs
+
+Design and planning documents covering the architecture, skill specs, and task breakdown are in [`docs/`](docs/).
 
 ## License
 
