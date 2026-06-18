@@ -26,6 +26,8 @@ Before scanning for patterns, identify and skip all non-prose regions:
 
 Only scan the remaining prose text for LLM-like patterns. Do not modify anything inside skipped regions.
 
+**Important:** Text inside double-quotes `"like this"` in prose is still prose — do not skip it. Only backtick-delimited spans and fenced code blocks are excluded.
+
 ## Step 3 — Detect Flagged Phrases
 
 Scan the prose text against the pattern table in the **LLM-Like Phrase Patterns** section below. For each match:
@@ -34,6 +36,8 @@ Scan the prose text against the pattern table in the **LLM-Like Phrase Patterns*
 - Matching is case-insensitive. Strip leading/trailing punctuation before matching (e.g. "Certainly!" matches the "Certainly" entry).
 - Flag complete phrase matches only — do not flag substrings. "notable" should not trigger the "It's worth noting" pattern.
 - If the same phrase appears multiple times, record each occurrence separately.
+
+**Em-dash density check:** After scanning for phrase patterns, count the total number of em dashes (`—`) in the prose sections. If the count exceeds **1 em dash per 100 words** of prose, flag the overuse: report the count and total prose word count, and recommend reviewing the highest-density sentences for replacement with commas, semicolons, colons, or parentheses as appropriate. Do not automatically rewrite em dashes — flag them for human review only. Add a single `Em-dash overuse` entry to the change list with weight **1** when the threshold is exceeded.
 
 Build a change list: `[(line, original_phrase, replacement, category, weight), ...]`
 
@@ -55,6 +59,7 @@ Cap the score at 0 (floor) and 100 (ceiling). A text with zero flagged phrases s
 - Deferential opener: **3**
 - Meta-commentary: **2**
 - Overly formal: **2**
+- Cliché/Hyperbole: **2**
 - Filler word/phrase: **1**
 
 ## Step 5 — Rewrite the Text
@@ -233,6 +238,25 @@ Unnecessarily bureaucratic constructions that add length without adding meaning.
 | It is recommended that | (restate as a direct recommendation) |
 | It is suggested that | (restate as a direct suggestion) |
 | It is advised that | (restate as direct advice) |
+
+### Category: Cliché/Hyperbole (weight 2)
+Grandiose or dramatic framings that LLMs reach for but human writers avoid.
+
+| Flagged Phrase | Human Alternative |
+|---|---|
+| the heart of | the core of |
+| the cornerstone of | the foundation of |
+| flagship | primary |
+| game-changing | (remove or restate the specific benefit) |
+| groundbreaking | (remove or restate the specific benefit) |
+| revolutionary | (remove or restate the specific benefit) |
+| transformative | (remove or restate the specific benefit) |
+| cutting-edge | (remove or restate the specific capability) |
+| state-of-the-art | (remove or restate the specific capability) |
+| seamlessly | (remove) |
+| robust | (remove or restate the specific quality) |
+| comprehensive | (remove) |
+| human readability | readability |
 
 ### Category: Filler Word/Phrase (weight 1)
 Words and short phrases that add length without adding meaning.
