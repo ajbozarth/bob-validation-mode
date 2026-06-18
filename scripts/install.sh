@@ -6,7 +6,7 @@
 #
 # What this does:
 #   1. Builds the MCP server in place
-#   2. Symlinks each skill into ~/.bob/skills/
+#   2. Copies each skill into ~/.bob/skills/
 #   3. Merges the mode entry into ~/.bob/settings/custom_modes.yaml
 #   4. Merges the MCP server entry into ~/.bob/settings/mcp.json
 
