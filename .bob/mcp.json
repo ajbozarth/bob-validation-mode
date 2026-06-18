@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mcp-pylint": {
+      "command": "node",
+      "args": ["./mcp-pylint/build/index.js"]
+    }
+  }
+}
