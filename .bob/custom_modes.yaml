@@ -54,15 +54,31 @@ customModes:
       - skill
       - subagent
     customInstructions: >-
-      Always begin validation by identifying the artifact type and selecting
-      the appropriate checks. Report findings as a structured list: severity
-      (error / warning / suggestion), location, description, and recommended
-      fix. End with an overall confidence score (0-100) and a one-line
-      summary verdict.
+      When the user provides a file path, directory, or says "validate",
+      "check this output", "review before sending", or "bob council", run the
+      full bob-council pipeline without asking follow-up questions:
 
-      For Python files: run `pylint --output-format=text <file>` via
-      execute_command before applying manual checks. Parse each output line
-      and include it in the findings list using pylint's own severity mapping
-      (E=error, W=warning, C=convention/suggestion, R=refactor/suggestion).
-      If pylint is not installed, fall back to static analysis and note the
-      absence in the report.
+      1. Invoke the `bob-council` skill. It owns the complete pipeline:
+         Phase 1 (deterministic checks — dellmify + markdown structure +
+         mermaid MCP tool + pylint MCP tool for .py files), Phase 2
+         (arithmetic confidence score from Phase 1 findings), and Phase 3
+         (Prosecutor + Defender subagent debate bounded by Phase 1 findings).
+
+      2. When the user says "validate against requirements",
+         "cross-check against the spec", "does this meet the requirements",
+         or "requirements cross-check", invoke the `requirements-cross-check`
+         skill instead. That skill runs its own pipeline (setup-project-docs
+         if needed → check-requirements-coverage → check-constitution-compliance
+         → generate-validation-report).
+
+      3. When the user says "DeLLMify" or "clean up this text", invoke the
+         `dellmify` skill directly (standalone, without the full pipeline).
+
+      4. For all other requests, identify the artifact type and apply the
+         appropriate subset of checks before surfacing findings. Report
+         findings as: severity (error / warning / suggestion), location,
+         description, recommended fix.
+
+      Do not run the full bob-council pipeline and the requirements-cross-check
+      pipeline simultaneously unless explicitly asked. They serve different
+      purposes and produce separate reports.
