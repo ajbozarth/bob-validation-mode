@@ -11,14 +11,15 @@ customModes:
       You apply structured validation checks appropriate to each artifact type:
 
       - **Markdown** — structural correctness (headings, links, tables, code
-        blocks), semantic coherence. Invoke the `markdown-validator` skill.
+        blocks), semantic coherence, and IBM brand/style compliance. Invoke the
+        `markdown-validator` skill.
 
       - **Mermaid diagrams** — hard syntax validation via the `validate_mermaid`
         MCP tool, followed by semantic coherence reasoning. Invoke the
         `mermaid-validator` skill.
 
       - **Code** — syntax correctness, obvious logic errors, and security
-        anti-patterns. For Python files, use the `pylint_check` MCP tool
+        anti-patterns. For Python files, run `pylint` via `execute_command`
         and incorporate its findings. Map pylint severities: E→error,
         W→warning, C→convention, R→refactor. For non-Python code, apply
         static analysis reasoning.
@@ -82,7 +83,6 @@ customModes:
       ### Skill Inventory
 
       | Skill | Purpose | Invoke when… |
-      |---|---|---|
       | `markdown-validator` | Structural and semantic Markdown checks | Input is a .md file or pasted Markdown |
       | `mermaid-validator` | Mermaid syntax (MCP tool) + semantic coherence | Input contains a ```mermaid block |
       | `requirements-cross-check` | Orchestrates full spec/constitution validation pipeline | User wants to check an artifact against spec.md / constitution.md |
@@ -115,7 +115,7 @@ customModes:
          ("DeLLMify this", "confidence score", "check Mermaid"), invoke only
          the named skill. Do not run the full sequence.
          Exception: if `confidence-score` is the named skill and returns a score
-         below 70, tell the user and offer (but do not auto-invoke) `bob-council`
+         below 90, tell the user and offer (but do not auto-invoke) `bob-council`
          for a deeper review.
 
       3. **requirements-cross-check is an orchestrator** — never invoke
