@@ -14,7 +14,7 @@ metadata:
 
 Bob Council receives an artifact and an optional baseline confidence score, spawns six independent reviewer personas in parallel, collects their findings, and synthesises a final verdict.
 
-This skill is invoked by the Bob Validation mode — either explicitly by the user, or automatically when the confidence score drops below 70. It can also be invoked standalone against any artifact.
+This skill is invoked by the bob-validation mode as step 6 of a full validation request (Rule 2). It can also be invoked standalone against any artifact.
 
 ---
 
