@@ -14,7 +14,7 @@ metadata:
 
 Bob Council is the arbitration phase of the validation pipeline. It receives a corrected artifact and a baseline confidence score, spawns six independent reviewer personas in parallel, collects their findings, and synthesises a final verdict.
 
-This skill is called by the `validate` skill as Phase 3. It can also be invoked standalone against any artifact.
+This skill is invoked by the bob-validation mode as step 6 of a full validation request (Rule 2). It can also be invoked standalone against any artifact.
 
 ---
 
