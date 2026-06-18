@@ -77,8 +77,8 @@ if [[ ! -f "${MCP_SERVER_BUILD}" ]]; then
 fi
 info "Built → ${MCP_SERVER_BUILD}"
 
-# ── Step 2: Symlink skills ────────────────────────────────────────────────────
-section "Step 2/4 — Symlinking skills..."
+# ── Step 2: Copy skills ───────────────────────────────────────────────────────
+section "Step 2/4 — Copying skills..."
 
 mkdir -p "${BOB_SKILLS_DIR}"
 
@@ -86,14 +86,18 @@ for skill_dir in "${REPO_ROOT}/.bob/skills"/*/; do
   skill_name="$(basename "${skill_dir}")"
   target="${BOB_SKILLS_DIR}/${skill_name}"
 
+  # Remove a stale symlink left over from a previous install
   if [[ -L "${target}" ]]; then
-    ln -sfn "${skill_dir}" "${target}"
-    info "Updated symlink: ${skill_name}"
-  elif [[ -e "${target}" ]]; then
-    warn "Skipped ${skill_name}: a non-symlink already exists at ${target}"
+    rm "${target}"
+  fi
+
+  if [[ -d "${target}" ]]; then
+    rm -rf "${target}"
+    cp -r "${skill_dir}" "${target}"
+    info "Updated: ${skill_name}"
   else
-    ln -s "${skill_dir}" "${target}"
-    info "Linked: ${skill_name}"
+    cp -r "${skill_dir}" "${target}"
+    info "Copied: ${skill_name}"
   fi
 done
 

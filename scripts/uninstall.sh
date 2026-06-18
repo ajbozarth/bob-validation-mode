@@ -25,18 +25,22 @@ CUSTOM_MODES_FILE="${HOME}/.bob/settings/custom_modes.yaml"
 MCP_JSON_FILE="${HOME}/.bob/settings/mcp.json"
 MCP_SERVER_ENTRY="bob-validation"
 
-# ── Step 1: Remove skill symlinks ─────────────────────────────────────────────
-section "Step 1/3 — Removing skill symlinks..."
+# ── Step 1: Remove installed skills ──────────────────────────────────────────
+section "Step 1/3 — Removing installed skills..."
 
 for skill_dir in "${REPO_ROOT}/.bob/skills"/*/; do
   skill_name="$(basename "${skill_dir}")"
   target="${BOB_SKILLS_DIR}/${skill_name}"
 
   if [[ -L "${target}" ]]; then
+    # Legacy symlink from an older install
     rm "${target}"
     info "Removed symlink: ${skill_name}"
+  elif [[ -d "${target}" ]]; then
+    rm -rf "${target}"
+    info "Removed: ${skill_name}"
   else
-    warn "Skipped ${skill_name}: not a symlink at ${target}"
+    warn "Skipped ${skill_name}: not found at ${target}"
   fi
 done
 
