@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.local
+.env.*
+!.env.example
+
+# OS
+Thumbs.db
+
+# mcp-server build is committed (required by .bob/mcp.json — no build step at install time)
+!mcp-server/build/

@@ -1,0 +1,23 @@
+{
+  "name": "mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server exposing deterministic validation tools for the bob-validation mode",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "@mermaid-js/parser": "^1.1.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "esbuild": "^0.28.1",
+    "typescript": "^6.0.3"
+  }
+}
