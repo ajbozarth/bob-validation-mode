@@ -1,6 +1,6 @@
 ---
 name: requirements-cross-check
-description: Use when the user wants to validate an artifact against requirements or compliance rules — cross-checks a spec, plan, tasks, or code against spec.md and constitution.md, flags missing coverage and violations, and generates a structured report. Trigger phrases: "validate against requirements", "cross-check this against the spec", "does this meet the requirements", "requirements cross-check", "check compliance".
+description: Use when the user wants to validate an artifact against requirements or compliance rules — cross-checks a spec, plan, tasks, or code against spec.md and constitution.md, flags missing coverage and violations, and generates a structured report. Trigger phrases include "validate against requirements", "cross-check this against the spec", "does this meet the requirements", "requirements cross-check", "check compliance".
 ---
 
 # Requirements Cross-Check — Orchestrator
