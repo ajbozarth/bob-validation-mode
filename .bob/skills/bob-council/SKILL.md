@@ -12,9 +12,9 @@ metadata:
 
 # Bob Council
 
-Bob Council is the arbitration phase of the validation pipeline. It receives a corrected artifact and a baseline confidence score, spawns six independent reviewer personas in parallel, collects their findings, and synthesises a final verdict.
+Bob Council receives an artifact and an optional baseline confidence score, spawns six independent reviewer personas in parallel, collects their findings, and synthesises a final verdict.
 
-This skill is called by the `validate` skill as Phase 3. It can also be invoked standalone against any artifact.
+This skill is invoked by the Bob Validation mode — either explicitly by the user, or automatically when the confidence score drops below 70. It can also be invoked standalone against any artifact.
 
 ---
 
@@ -25,11 +25,11 @@ Convene six independent voices to examine an artifact from different perspective
 ## Scope
 
 **Input required:**
-- The artifact to review (full text, post auto-fix if coming from the `validate` pipeline)
-- The baseline confidence score from `confidence-score` (or 100 if invoked standalone)
+- The artifact to review (full text)
+- The baseline confidence score from the `confidence-score` skill, if it was run earlier in the same session (or 100 if invoked standalone)
 
 **Out of scope:**
-- Running validators or auto-fixing — that is the `validate` skill's job
+- Running validators or auto-fixing — those are handled by other skills in the routing sequence (`markdown-validator`, `mermaid-validator`, etc.)
 - Computing the baseline score — that is the `confidence-score` skill's job
 
 ---
@@ -38,8 +38,8 @@ Convene six independent voices to examine an artifact from different perspective
 
 ### Step 1 — Establish the baseline score
 
-- If called from the `validate` pipeline: use the score passed in from `confidence-score`.
-- If invoked standalone (user says "run bob council on X"): set baseline to **100** and skip Phase 2 output — the Council will compute the only score.
+- If `confidence-score` was run earlier in the session: use that score as the baseline.
+- If invoked standalone (user says "run bob council on X"): set baseline to **100** — the Council adjustments will compute the only score.
 
 ### Step 2 — Spawn all six personas in parallel
 
@@ -330,7 +330,7 @@ Floor at 0.
 ### Step 4 — Render the Council output
 
 ```
-## Phase 3 — Council Review
+## Council Review
 
 ### 🔬 The Nit-Picker
 <verbatim output>
@@ -368,7 +368,7 @@ Floor at 0.
 
 ### Final Score
 
-**Baseline score (from Phase 2):** <n>/100
+**Baseline score (from confidence-score skill, or 100 if standalone):** <n>/100
 **Council adjustments:** −<n> (HIGH: <count>×−10, MEDIUM: <count>×−5, LOW: <count>×−2)
 **Hard caps applied:** <"Principal Engineer: FUNDAMENTAL ISSUE" and/or "Security Auditor: error finding", or "None">
 **Final score:** <n>/100
@@ -385,6 +385,5 @@ Floor at 0.
 
 ## References
 
-- [Validate skill](../validate/SKILL.md) — calls this skill as Phase 3
 - [Confidence Score skill](../confidence-score/SKILL.md) — provides the baseline score
-- [Project plan](../../docs/PLAN.md)
+- [Bob Validation mode](../../custom_modes.yaml) — the routing layer that invokes this skill
