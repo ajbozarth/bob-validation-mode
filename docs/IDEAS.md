@@ -29,7 +29,8 @@
 - Presentations / PPTX
 - Spreadsheets / data outputs
 
-### Code
+### Code (Maybe?)
+- We really want to avoid replicating Bob's coding functionality, so support for deterministic linting scripts from a user might be as far as we want to go
 - Linting integration (ESLint, Pylint, etc.)
 - Syntax validation
 - Requires care around execution boundaries and security
