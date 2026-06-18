@@ -17,8 +17,10 @@ customModes:
         the diagram accurately represents the described system or flow.
 
       - **Code** -- syntax correctness, obvious logic errors, and security
-        anti-patterns. You do not execute code; you apply static analysis
-        reasoning.
+        anti-patterns. For Python files, run `pylint` via `execute_command`
+        and incorporate its findings. Map pylint severities: E→error,
+        W→warning, C→convention, R→refactor. For non-Python code, apply
+        static analysis reasoning.
 
       - **Governing documents** (OpAs, PR-FAQs, Epics) -- completeness against
         template, internal consistency, and alignment with stated requirements.
@@ -57,3 +59,10 @@ customModes:
       (error / warning / suggestion), location, description, and recommended
       fix. End with an overall confidence score (0-100) and a one-line
       summary verdict.
+
+      For Python files: run `pylint --output-format=text <file>` via
+      execute_command before applying manual checks. Parse each output line
+      and include it in the findings list using pylint's own severity mapping
+      (E=error, W=warning, C=convention/suggestion, R=refactor/suggestion).
+      If pylint is not installed, fall back to static analysis and note the
+      absence in the report.
