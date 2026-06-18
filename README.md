@@ -73,11 +73,50 @@ debate closes that gap in a way that asking the model "are you sure?" never will
 
 ## MCP Server
 
-`mcp-pylint` — runs Pylint on Python files and returns structured findings. Called automatically by `bob-council` for `.py` artifacts.
+Two tools, both called automatically by the skills — you never invoke them directly:
+
+| Tool | What it does |
+|---|---|
+| `validate_mermaid` | Runs the Mermaid parser on a diagram string and returns syntax errors |
+| `pylint_check` | Runs Pylint on a Python file and returns structured findings |
+
+## Installation
+
+### Prerequisites
+
+- [Bob](https://github.com/ibm/bob) installed
+- Node.js 18+
+
+### Steps
+
+```bash
+git clone https://github.com/ajbozarth/bob-validation-mode.git
+cd bob-validation-mode
+./scripts/install.sh
+```
+
+Then restart Bob (start a new session). The mode, skills, and MCP server are live.
+
+### What the installer does
+
+| Step | Action |
+|---|---|
+| 1 | Builds the MCP server (`npm ci && npm run build` inside `mcp-server/`) |
+| 2 | Symlinks each skill directory into `~/.bob/skills/` |
+| 3 | Appends the mode entry to `~/.bob/settings/custom_modes.yaml` |
+| 4 | Adds the MCP server entry to `~/.bob/settings/mcp.json` |
+
+Skills are symlinked, not copied — a `git pull` is all that's needed to pick up updates. Re-running `./scripts/install.sh` after a pull rebuilds the MCP server and updates any symlinks.
+
+### Uninstall
+
+```bash
+./scripts/uninstall.sh
+```
+
+Removes skill symlinks, the mode entry, and the MCP registration. The cloned repo is left in place.
 
 ## Mode
-
-Install by adding the entry from [`.bob/custom_modes.yaml`](.bob/custom_modes.yaml) to your workspace's `.bob/custom_modes.yaml`.
 
 ### Slug
 
