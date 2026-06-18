@@ -21,6 +21,38 @@ reliably produces 85–95% — that is the baseline to beat.
   (covered / partial / missing counts) directly into the Coverage dimension instead of re-evaluating.
 - If neither has run, this skill is fully self-contained — execute all phases below independently.
 
+**Integration ambiguity resolution (AC-9/AC-10):**
+- If Bob Council ran but returned scores for only a subset of dimensions, treat the missing
+  dimensions as unscored and evaluate them yourself; do not skip Phase 2 for those dimensions.
+- If Requirements Cross-Check ran but the matrix is incomplete (some requirements have no
+  verdict), treat the uncovered requirements as `missing` and apply the Coverage penalty
+  accordingly. Do not re-evaluate the requirements that do have a verdict.
+- If it is unclear whether either integration has run, default to the standalone path (Phase 2
+  subagent). Ambiguity is not a reason to skip context separation.
+
+---
+
+## Design Decisions
+
+The following values and rules are **implementation choices** required to operationalize the spec.
+They are not directly specified by any AC — the spec requires the behavior they implement but
+leaves the exact mechanism to the implementer. Each is listed with its rationale.
+
+| Decision | Value | Rationale |
+|----------|-------|-----------|
+| Uncertainty penalty quantum | −0.5 per item per dimension (floor 0) | AC-3 requires "mechanical reduction"; 0.5 on a 0–2 scale is the smallest step that produces meaningful separation without flooring too quickly on moderate artifacts. |
+| Score formula | `(sum of dimension scores / 10) × 100` | Five dimensions × max 2 = 10 possible points; linear normalisation to 0–100. |
+| Spec Clarity = 1 ceiling | 80 | AC-4 requires a cap below 100 when the spec was ambiguous; 80 preserves meaningful headroom above a clean-spec score. |
+| Spec Clarity = 0 ceiling | 50 | AC-4 requires a cap below 100 when the spec was vague; 50 reflects that a vague spec cannot support more than a coin-flip confidence level. |
+| "Lowest ceiling wins" rule | Applied when multiple ceiling conditions are true | Prevents two mild ceiling conditions from independently applying their higher values when the worst condition should dominate. |
+| DISCARD escalation | Coverage = 0 AND Grounding = 0 → DISCARD | AC-8 requires "at minimum REVISE" for a zero in either dimension; escalating to DISCARD when both are zero simultaneously reflects that two independent critical failures together constitute an unrecoverable artifact. |
+| Partial-Council fallback | Evaluate unscored dimensions yourself; do not skip Phase 2 for those dimensions | AC-9 forbids re-evaluating dimensions that Council scored; it is silent on dimensions Council did not cover. This fallback fills the gap without violating the non-duplication intent. |
+| Partial-matrix fallback | Treat uncovered requirements as `missing` | AC-10 requires deriving Coverage from the cross-check matrix; when the matrix is incomplete, a conservative default (missing) is used for unverified entries to avoid inflating Coverage. |
+| "First match" penalty routing | Uncertainty items mapped to their primary dimension type | AC-3 requires mechanical reduction to "at least one dimension"; a deterministic first-match table avoids double-penalising a single item while ensuring every item has a destination. |
+| Bucket thresholds and emoji | 0–20 🔴 / 21–40 🟠 / 41–60 🟡 / 61–80 🟢 / 81–100 ✅ | AC-6 requires bucket-first assignment; these five bands provide meaningful calibration separation. Emoji aid rapid visual parsing in downstream tooling. |
+| fork_context: false | Used as the context-separation mechanism in Phase 2 | AC-1 requires architectural separation; `fork_context: false` is the available runtime primitive that guarantees the subagent starts with no inherited conversation state. Whether this is sufficient depends on the runtime — if a different platform is used, an equivalent isolation mechanism must be substituted. |
+| Council "Requirements Reviewer" weighting note | Informational; not a scoring override | AC-9 is silent on differential persona weighting. The note reflects that Coverage is this persona's primary domain; implementers may ignore it without violating any AC. |
+
 ---
 
 ## Phase 1 — Identify the Artifact and Spec
@@ -32,7 +64,9 @@ Determine what is being scored and what it is being scored *against*:
    artifact was supposed to satisfy.
 
 If no spec is provided, note this explicitly. The absence of a spec does not mean full confidence —
-it means the Coverage and Grounding dimensions are capped at 1/2 (partial). State this to the user.
+it means the Coverage and Grounding dimensions are capped at 1/2 (partial), and the **maximum
+achievable score is 60** regardless of other dimension scores. State this ceiling to the user before
+proceeding.
 
 ---
 
@@ -43,17 +77,23 @@ has already read) an artifact is context-contaminated — its attention is ancho
 regardless of what the prompt says. The only reliable fix is genuine epistemic separation: a scorer
 that has never seen the generation context.
 
-**Spawn a subagent with `fork_context: false`** and pass it exactly three things:
+**Spawn a subagent with `fork_context: false`** and pass it exactly four things:
 
 1. The spec/requirements text
-2. The rubric (the five dimensions from Phase 4, copied verbatim)
-3. The artifact text
+2. The Phase 3 — Uncertainty Elicitation instructions (copied verbatim from this skill)
+3. The rubric (the five dimensions from Phase 4, copied verbatim)
+4. The artifact text
 
 Do NOT pass: conversation history, any reasoning about how the artifact was produced, prior scores,
 or any other context. `fork_context: false` is the load-bearing flag — it guarantees a clean
 context window with no inherited state.
 
-Instruct the subagent to execute Phases 3 and 4 and return a structured result in this exact format:
+The subagent owns uncertainty elicitation (Phase 3) and rubric scoring (Phase 4). The parent agent
+does NOT run Phase 3 before spawning — doing so would contaminate the subagent's independent
+judgment. The parent resumes at Phase 5 only after the subagent returns its result.
+
+Instruct the subagent to complete Phase 3 first (list all uncertainty sources), then Phase 4
+(score each dimension), and return a structured result in this exact format:
 
 ```
 SCORER RESULT
@@ -99,9 +139,9 @@ verdict directly for the Coverage dimension.
 ### Dimensions (each 0–2)
 
 **Grounding** — Does every substantive claim trace to a specific part of the spec or input?
-- 2 = All claims grounded; nothing added beyond the spec
+- 2 = All claims grounded; any additions beyond the spec are explicitly flagged as design decisions
 - 1 = Mostly grounded; minor inferences present but clearly flagged
-- 0 = Unverified claims present without acknowledgment
+- 0 = Additions or inferences presented as spec-derived without acknowledgment
 
 **Citation Verifiability** *(conditional — apply only if the artifact contains cited sources)*
 This sub-dimension folds into Grounding. It is not scored separately; it adjusts the Grounding
@@ -156,14 +196,36 @@ If **Spec Clarity = 1**, the maximum possible score is **80**.
 
 Receive the scorer result from Phase 2 (or Council persona scores if Bob Council ran).
 
-Apply the Phase 3 uncertainty penalty: for each uncertainty source the subagent identified that
-directly implicates a grounding-sensitive claim, reduce Grounding by 0.5 (min 0).
+### Uncertainty Penalty (deterministic, required — AC-3)
+
+Every uncertainty item identified in Phase 3 **must reduce at least one dimension score by −0.5
+(floor 0)**. This is not optional. An uncertainty that has no effect on any dimension score
+indicates the elicitation step was skipped or the mapping was not applied.
+
+Use this mapping to determine which dimension to penalise for each uncertainty item. Apply the
+first match:
+
+| Uncertainty type | Dimension penalised |
+|-----------------|---------------------|
+| Unverified factual claim, hallucinated citation, or inference beyond the spec | **Grounding** −0.5 |
+| Spec requirement not addressed or only partially addressed | **Coverage** −0.5 |
+| Contradictory or self-inconsistent content within the artifact | **Consistency** −0.5 |
+| Vague, generic, or non-actionable content where specifics were required | **Specificity** −0.5 |
+| Ambiguity or underspecification in the source spec itself | **Spec Clarity** −0.5 |
+
+Multiple uncertainties of the same type stack: each one subtracts another −0.5 from the same
+dimension (floor 0 per dimension). If an uncertainty clearly spans two types, apply both penalties.
+
+Record each penalty as `[dimension] −0.5 (uncertainty: "[brief label]")` so the deduction is
+auditable in the output block.
 
 If Bob Council was used: compute σ per dimension across all persona scores. Flag any dimension
 where σ ≥ 0.7 — high variance means reviewers disagreed and that dimension is unreliable.
+*(σ ≥ 0.7 threshold is a design choice — see Design Decisions. Substitute a different threshold
+if your Council produces a different score distribution.)*
 
 If running standalone (single subagent scorer): no variance to compute. Report the subagent's
-scores directly.
+scores after applying uncertainty penalties.
 
 ---
 
@@ -174,7 +236,29 @@ scores directly.
 raw_score = (sum of dimension scores / 10) × 100
 ```
 
-**Apply the spec ceiling** (from Phase 4 ceiling rule if triggered).
+**Apply all applicable ceilings — the lowest ceiling wins:**
+
+| Condition | Ceiling |
+|-----------|---------|
+| No spec provided (Phase 1) | **60** |
+| Spec Clarity = 1 (Phase 4) | **80** |
+| Spec Clarity = 0 (Phase 4) | **50** |
+
+When more than one ceiling condition is true simultaneously, use the lowest value. For example, if
+no spec was provided *and* internal assessment of what spec exists rates it at 0, the ceiling is
+50, not 60. State every active ceiling in the `Ceiling Applied` output field.
+
+**If the Spec Clarity ceiling is the binding constraint** (i.e. it is the lowest active ceiling,
+or the only active ceiling), add this message immediately after the output block:
+
+> ⚠️ **Score ceiling reached — spec is the limiting factor.**
+> The score cannot exceed [N] regardless of how the artifact is revised. The ceiling is set by
+> Spec Clarity = [0|1] in the rubric, which reflects ambiguity or underspecification in the
+> *source spec* — not a defect in the artifact itself. To raise the ceiling, the spec needs to
+> be tightened: clarify [list the specific ambiguous ACs or requirements identified in Phase 3].
+
+Do NOT emit this message when the binding ceiling is the no-spec ceiling (Phase 1) — that ceiling
+is about a missing input, not an ambiguous one, and warrants different guidance.
 
 **Assign a bucket — choose the bucket label first, before the number:**
 
@@ -214,7 +298,7 @@ Uncertainty Sources:
   • [Each item from Phase 3 — one bullet per unverified claim or assumption]
   • (none) if nothing identified
 
-Ceiling Applied: [Yes — Spec Clarity capped score at N | No]
+Ceiling Applied: [Yes — [list each active ceiling: No-spec ceiling: 60 | Spec Clarity=1: 80 | Spec Clarity=0: 50]; lowest applied: N | No]
 
 [If Bob Council was used:]
 Reviewer Agreement:
@@ -235,8 +319,18 @@ Recommendation: [ACT | REVIEW | REVISE | DISCARD]
 | 41–60  | REVISE |
 | 0–40   | DISCARD |
 
-Override the default if a specific dimension is critically low. A 72 overall with Coverage = 0
-should still be REVISE, not REVIEW — missing requirements are a blocker regardless of aggregate score.
+**Mandatory overrides — these take precedence over the score-range default:**
+
+| Condition | Override to |
+|-----------|-------------|
+| Coverage = 0 | REVISE (missing requirements are a hard blocker) |
+| Grounding = 0 | REVISE (unverified claims are a hard blocker) |
+| Coverage = 0 AND Grounding = 0 | DISCARD |
+
+Apply the strongest applicable override. A 72 overall with Coverage = 0 becomes REVISE, not
+REVIEW. A 30 overall with Coverage = 0 AND Grounding = 0 becomes DISCARD, not just REVISE.
+No other dimension triggers a mandatory override, though a zero in any dimension is worth
+calling out explicitly in the recommendation text.
 
 ---
 
@@ -247,8 +341,8 @@ should still be REVISE, not REVIEW — missing requirements are a blocker regard
 1. Phase 1: Artifact = Epic, Spec = PR-FAQ
 2. Phase 2: Spawn scorer subagent (`fork_context: false`) with spec + rubric + artifact only.
             Subagent executes Phases 3–4 and returns the SCORER RESULT block.
-3. Phase 5: Receive scores. Apply uncertainty penalties to Grounding if warranted.
-            No variance to compute (single scorer).
+3. Phase 5: Receive scores. Apply the uncertainty penalty mapping — each Phase 3 item reduces
+            its mapped dimension by −0.5 (floor 0). No variance to compute (single scorer).
 4. Phase 6: Calculate score, apply ceiling if Spec Clarity triggered it, pick bucket label first.
 5. Phase 7: Emit output block.
 
@@ -266,7 +360,8 @@ Jump directly to Phase 5:
 - Proceed to Phase 6 and 7
 
 The Council's "Requirements Reviewer" persona will typically have the most informative Coverage
-score — weight it accordingly if the other personas scored outside their primary expertise.
+score — you may weight it accordingly if the other personas scored outside their primary expertise.
+*(Informational design choice — not a scoring override. See Design Decisions.)*
 
 ---
 
@@ -278,5 +373,7 @@ For the Coverage dimension in Phase 4:
 - Count the requirements marked `missing` (weight: −1 each, min 0)
 - Count the requirements marked `partial` (weight: −0.5 each)
 - Map to 0/1/2: 0 missing + 0 partial = 2; any partial but no missing = 1; any missing = 0
+*(This mapping formula is a design choice — see Design Decisions. AC-10 requires deriving Coverage
+from the matrix but does not specify the exact formula.)*
 
 Do not re-evaluate coverage yourself — import the cross-check result directly.
